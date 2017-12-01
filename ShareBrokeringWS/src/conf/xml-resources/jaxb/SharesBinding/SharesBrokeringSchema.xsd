@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    elementFormDefault="qualified">
+    
+    <xsd:complexType name="SharePrice">
+        <xsd:sequence>
+            <xsd:element name="currency" type="xsd:string" />
+            <xsd:element name="value" type="xsd:float" />
+            <xsd:element name="lastUpdate" type="xsd:date" />
+        </xsd:sequence>
+    </xsd:complexType>
+    
+    <xsd:complexType name="Share">
+        <xsd:sequence>
+            <xsd:element name="CompanyName" type="xsd:string"/>
+            <xsd:element name="AvailableShares" type="xsd:int" />
+            <xsd:element name="Price" type="SharePrice"/>
+        </xsd:sequence>
+        <xsd:attribute name="CompanySymobol" type="xsd:string" />
+    </xsd:complexType>
+    
+    <xsd:element name="Shares">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element name="Share" type="Share" minOccurs="0"  maxOccurs="unbounded" />
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+    
+</xsd:schema>
