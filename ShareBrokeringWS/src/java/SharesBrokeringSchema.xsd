@@ -3,10 +3,21 @@
 <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
     elementFormDefault="qualified">
     
+    <xsd:complexType name="shareHistory">
+        <xsd:sequence>
+            <xsd:element name="open" type="xsd:float" />
+            <xsd:element name="high" type="xsd:float" />
+            <xsd:element name="low" type="xsd:float" />
+            <xsd:element name="close" type="xsd:float" />
+        </xsd:sequence>
+        <xsd:attribute name="date" type="xsd:date" />
+    </xsd:complexType>
+    
     <xsd:complexType name="SharePrice">
         <xsd:sequence>
             <xsd:element name="currency" type="xsd:string" />
             <xsd:element name="value" type="xsd:float" />
+            <xsd:element name="history" type="shareHistory" minOccurs="0"  maxOccurs="unbounded" />
             <xsd:element name="lastUpdate" type="xsd:date" />
         </xsd:sequence>
     </xsd:complexType>

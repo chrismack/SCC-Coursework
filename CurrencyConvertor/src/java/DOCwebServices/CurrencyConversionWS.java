@@ -20,10 +20,10 @@ import javax.json.JsonReader;
 import javax.json.JsonValue;
 import javax.jws.WebService;
 
-
 /**
  *
  * @author taha-m
+ * @author Chris Mack N0576565
  */
 @WebService(serviceName = "CurrencyConversionWS")
 public class CurrencyConversionWS {
@@ -94,11 +94,11 @@ public class CurrencyConversionWS {
             this.rateInGBP = rateInGBP;
             this.curName = curName;
         }
-        
+
         void setRate(double rate) {
             this.rateInGBP = rate;
         }
-        
+
         double rateInGBP() {
             return rateInGBP;
         }
@@ -107,22 +107,24 @@ public class CurrencyConversionWS {
             return curName;
         }
     }
-    
+
     /*
      * Check if rates need to be updated
      * RestApi updates around 4pm cet time
      */
     private boolean shouldUpdate() {
-        if (lastUpdated == null) return true;
-        
+        if (lastUpdated == null) {
+            return true;
+        }
+
         // Check for update if last update is older than 24 hours or 
         // if this is first update after 5pm cet time today
         LocalDateTime cetTime = LocalDateTime.now(ZoneId.of("CET"));
         long hoursDiff = lastUpdated.until(cetTime, ChronoUnit.HOURS);
-        
-        return hoursDiff >= 24 || lastUpdated.getHour() < 17;   
+
+        return hoursDiff >= 24 || lastUpdated.getHour() < 17;
     }
-    
+
     /*
      * GET lastest conversion rates from fixer.io replace existing enum values
      */
@@ -130,26 +132,24 @@ public class CurrencyConversionWS {
         if (shouldUpdate()) {
             try {
                 HttpURLConnection connection = (HttpURLConnection) new URL(RESTURL).openConnection();
-                connection.setRequestMethod("GET");
                 int responseCode = connection.getResponseCode();
-                if(responseCode == HttpURLConnection.HTTP_OK) {
-                    
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+
                     JsonReader jr = Json.createReader(connection.getInputStream());
                     JsonObject rates = jr.readObject().getJsonObject("rates");
-                    
+
                     for (ExRate exr : ExRate.values()) {
-                        if(rates.containsKey(exr.name())) {
+                        if (rates.containsKey(exr.name())) {
                             JsonValue rate = rates.get(exr.name());
                             exr.setRate(1 / Double.parseDouble(rate.toString()));
                         }
                     }
-                    
                 }
-                
+
             } catch (IOException ex) {
                 Logger.getLogger(CurrencyConversionWS.class.getName()).log(Level.SEVERE, null, ex);
             }
-            
+
             lastUpdated = LocalDateTime.now(ZoneId.of("CET"));
         }
     }

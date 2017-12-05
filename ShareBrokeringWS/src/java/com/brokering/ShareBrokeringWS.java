@@ -6,12 +6,26 @@
 package com.brokering;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.jws.WebService;
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
 import javax.ejb.Stateless;
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
 import javax.xml.bind.JAXBException;
 import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
@@ -30,14 +44,16 @@ public class ShareBrokeringWS {
     private final File sharesXML = new File("Shares.xml");
     private final Share errorShare = new Share();
 
+    private static final String QUANDL = "www.quandl.com";
+    private static final String QUANDLPATH = "/api/v3/datasets/";
+    
     public ShareBrokeringWS() {
         errorShare.setCompanyName("No shares could be found");
     }
     
-    
-    
     /**
      * Web service operation
+     * @return 
      */
     @WebMethod(operationName = "setup")
     public Shares setup() {
@@ -45,12 +61,12 @@ public class ShareBrokeringWS {
         List<Share> sharesList = shares.getShare();
         
         Share share = new Share();
-        share.setCompanyName("Test");
-        share.setCompanySymobol("TST");
+        share.setCompanyName("Apple");
+        share.setCompanySymobol("AAPL");
         share.setAvailableShares(100);
         
         SharePrice price = new SharePrice();
-        price.setCurrency("");
+        price.setCurrency("USD");
         price.setValue(1);
         price.setLastUpdate(generateDate(2017, 12, 1));
         share.setPrice(price);
@@ -58,12 +74,12 @@ public class ShareBrokeringWS {
         
         
         share = new Share();
-        share.setCompanyName("Test2");
-        share.setCompanySymobol("TST2");
+        share.setCompanyName("Nvidia");
+        share.setCompanySymobol("NVDA");
         share.setAvailableShares(100);
         
         price = new SharePrice();
-        price.setCurrency("");
+        price.setCurrency("USD");
         price.setValue(0);
         price.setLastUpdate(generateDate(2017, 12, 1));
         share.setPrice(price);
@@ -98,8 +114,7 @@ public class ShareBrokeringWS {
                                 @WebParam(name = "minPrice") String minPrice,
                                 @WebParam(name = "maxPrice") String maxPrice) {
         
-        Shares shares = unmarshalShares();
-        List<Share> sharesList = shares.getShare();
+        List<Share> sharesList = getAllShares();
         
         Shares foundShares = new Shares();
         List<Share> searchList = foundShares.getShare();
@@ -141,19 +156,27 @@ public class ShareBrokeringWS {
     
         /**
      * Web service operation
+     * @return 
      */
     @WebMethod(operationName = "getAllShares")
     public List<Share> getAllShares() {
-        return unmarshalShares().getShare();    
+        Shares shares = unmarshalShares();
+        List<Share> sharesList = shares.getShare();
+        for(Share share : sharesList) {
+            updateShare(share);
+        }
+        marshalShares(shares);
+        return sharesList;    
     }
 
     /**
      * Web service operation
+     * @param name
+     * @return 
      */
     @WebMethod(operationName = "getShareName")
     public Share getShareByName(@WebParam(name = "companyName") String name) {
-        Shares shares = unmarshalShares();
-        List<Share> sharesList = shares.getShare();
+        List<Share> sharesList = getAllShares();
         
         for (Share share : sharesList) {
             if (name.equalsIgnoreCase(share.getCompanyName())) {
@@ -166,11 +189,12 @@ public class ShareBrokeringWS {
     
     /**
      * Web service operation
+     * @param sym
+     * @return 
      */
     @WebMethod(operationName = "getShareBySymobol")
     public Share getShareBySymobol(@WebParam(name = "comanySymbol") String sym) {
-        Shares shares = unmarshalShares();
-        List<Share> sharesList = shares.getShare();
+        List<Share> sharesList = getAllShares();
         
         for(Share share : sharesList) {
             if(sym.equalsIgnoreCase(share.getCompanySymobol())) {
@@ -182,17 +206,23 @@ public class ShareBrokeringWS {
     
     /**
      * Web service operation
+     * @param symbol
+     * @param volume
+     * @return 
      */
     @WebMethod(operationName = "buyShares")
-    public String buyShares(@WebParam(name = "symbol") String symbol, @WebParam(name = "volume") int volume) {
+    public String buyShares(@WebParam(name = "symbol") String symbol, 
+                            @WebParam(name = "volume") int volume) {
         if(volume > 0) {
-            Shares shares = unmarshalShares();
-            List<Share> sharesList = shares.getShare();
+            List<Share> sharesList = getAllShares();
             for(Share share : sharesList) {
                 if(share.getCompanySymobol().equalsIgnoreCase(symbol)) {
                     int currentShares = share.getAvailableShares();
                     if(currentShares >= volume) {
                         share.setAvailableShares(currentShares - volume);
+                        
+                        Shares shares = new Shares();
+                        shares.share = sharesList;
                         marshalShares(shares);
                         return volume + " shares bought from " + symbol;
                     }
@@ -201,6 +231,79 @@ public class ShareBrokeringWS {
         }
         
         return "Error buying " + volume + "shares from " + symbol;
+    }
+    
+    private InputStream sendGet(URL url, Map<String, String> headers) {
+        try {
+            
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            
+            if(headers != null) {
+                Iterator it = headers.entrySet().iterator();
+                while(it.hasNext()) {
+                    Map.Entry<String, String> pair = (Map.Entry) it.next();
+                    connection.setRequestProperty(pair.getKey(), pair.getValue());
+                    it.remove();
+                }
+            }
+            
+            int responseCode = connection.getResponseCode();
+            if(responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_MOVED_PERM) {
+                return connection.getInputStream();
+            }
+            
+        } catch (IOException ex) {
+            Logger.getLogger(ShareBrokeringWS.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }
+    
+    private String queryBuilder(Map<String, String> queryMap) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("?");
+        Iterator it = queryMap.entrySet().iterator();
+        while(it.hasNext()) {
+            Map.Entry<String, String> pair = (Map.Entry) it.next();
+            sb.append(pair.getKey());
+            sb.append("=");
+            sb.append(pair.getValue());
+            if(it.hasNext()) {
+                sb.append("&");
+            }
+        }
+        return sb.toString();
+    }
+    
+    private void updateShare(Share share) {
+        
+        try {
+            // TODO update the share
+            // Update Value
+            // Update History
+            String urlString = "https://" + QUANDL + QUANDLPATH + "WIKI/" + share.companySymobol + ".json";
+            
+            Map<String, String> queries = new HashMap<>();
+            queries.put("rows", "1");
+            queries.put("column_index", "4");
+            urlString += queryBuilder(queries);
+            
+            URL url = new URL(urlString);
+            InputStream is = sendGet(url, null);
+            
+            if(is != null) {
+                JsonReader json = Json.createReader(is);
+                JsonObject dataset = json.readObject().getJsonObject("dataset");
+                JsonArray data = dataset.getJsonArray("data").getJsonArray(0);
+                share.getPrice().setValue(Float.parseFloat(data.get(1).toString()));
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(ShareBrokeringWS.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        Calendar cal = Calendar.getInstance();
+        share.getPrice().setLastUpdate(generateDate(cal.get(Calendar.YEAR), 
+                cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)));
+        
     }
     
     private XMLGregorianCalendar generateDate(int year, int month, int day) {
