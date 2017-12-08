@@ -10,7 +10,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -283,8 +287,8 @@ public class ShareBrokeringWS {
             String urlString = "https://" + QUANDL + QUANDLPATH + "WIKI/" + share.companySymobol + ".json";
             
             Map<String, String> queries = new HashMap<>();
-            queries.put("rows", "1");
-            queries.put("column_index", "4");
+            queries.put("rows", "8");
+//            queries.put("column_index", "4");
             urlString += queryBuilder(queries);
             
             URL url = new URL(urlString);
@@ -293,10 +297,42 @@ public class ShareBrokeringWS {
             if(is != null) {
                 JsonReader json = Json.createReader(is);
                 JsonObject dataset = json.readObject().getJsonObject("dataset");
-                JsonArray data = dataset.getJsonArray("data").getJsonArray(0);
-                share.getPrice().setValue(Float.parseFloat(data.get(1).toString()));
+                JsonArray data = dataset.getJsonArray("data");
+                
+                
+                // Update the current value of the share
+                JsonArray todaysData = data.getJsonArray(0);
+                share.getPrice().setValue(Float.parseFloat(todaysData.get(1).toString()));
+                
+                // Update previous prices for share
+                List<ShareHistory> historyList = new ArrayList<>();
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+                
+                for(int i = 1; i <= 7; i++) {
+                    JsonArray pastValues = data.getJsonArray(i);
+                    ShareHistory history = new ShareHistory();
+                    
+                    Date date = dateFormat.parse(pastValues.getString(0));
+                    Calendar cal = Calendar.getInstance();
+                    cal.setTime(date);
+                    
+                    float open = Float.parseFloat(pastValues.get(1).toString());
+                    float high = Float.parseFloat(pastValues.get(2).toString());
+                    float low = Float.parseFloat(pastValues.get(3).toString());
+                    float close = Float.parseFloat(pastValues.get(4).toString());
+                    
+                    history.setDate(generateDate(cal.get(Calendar.YEAR), 
+                        cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)));
+                    history.setOpen(open);
+                    history.setClose(close);
+                    history.setLow(low);
+                    history.setHigh(high);
+                    historyList.add(history);
+                }
+                share.getPrice().history = historyList;
+                
             }
-        } catch (IOException ex) {
+        } catch (IOException | ParseException ex) {
             Logger.getLogger(ShareBrokeringWS.class.getName()).log(Level.SEVERE, null, ex);
         }
         
@@ -307,8 +343,12 @@ public class ShareBrokeringWS {
     }
     
     private XMLGregorianCalendar generateDate(int year, int month, int day) {
+        Calendar cal = Calendar.getInstance();
         XMLGregorianCalendar xmlDate;
-        GregorianCalendar data = new GregorianCalendar(year, month, day);
+        GregorianCalendar data = new GregorianCalendar(year, month, day, 
+                cal.get(Calendar.HOUR), 
+                cal.get(Calendar.MINUTE), 
+                cal.get(Calendar.SECOND));
         try {
             xmlDate = DatatypeFactory.newInstance().newXMLGregorianCalendar(data);
             return xmlDate;
@@ -318,7 +358,6 @@ public class ShareBrokeringWS {
         }
         return null;
     }
-    
     
     private void marshalShares(Shares shares){
         try {

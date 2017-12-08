@@ -10,7 +10,7 @@
             <xsd:element name="low" type="xsd:float" />
             <xsd:element name="close" type="xsd:float" />
         </xsd:sequence>
-        <xsd:attribute name="date" type="xsd:date" />
+        <xsd:attribute name="date" type="xsd:dateTime" />
     </xsd:complexType>
     
     <xsd:complexType name="SharePrice">
@@ -18,7 +18,7 @@
             <xsd:element name="currency" type="xsd:string" />
             <xsd:element name="value" type="xsd:float" />
             <xsd:element name="history" type="shareHistory" minOccurs="0"  maxOccurs="unbounded" />
-            <xsd:element name="lastUpdate" type="xsd:date" />
+            <xsd:element name="lastUpdate" type="xsd:dateTime" />
         </xsd:sequence>
     </xsd:complexType>
     
