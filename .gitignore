@@ -1,5 +1,5 @@
 /ShareBrokeringWS/nbproject/private/
-/ShareBrokeringWS/build/
+/ShareBrokeringWS/build/*
 !/ShareBrokeringWS/build/generated-sources/
 /ShareBrokeringWS/dist/
 /CurrencyConvertor/build/
