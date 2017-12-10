@@ -15,20 +15,19 @@ import javax.xml.bind.annotation.XmlType;
 
 
 /**
- * <p>Java class for shareNews complex type.
+ * <p>Java class for companyInfo complex type.
  * 
  * <p>The following schema fragment specifies the expected content contained within this class.
  * 
  * <pre>
- * &lt;complexType name="shareNews">
+ * &lt;complexType name="companyInfo">
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
  *       &lt;sequence>
- *         &lt;element name="source" type="{http://www.w3.org/2001/XMLSchema}string"/>
- *         &lt;element name="title" type="{http://www.w3.org/2001/XMLSchema}string"/>
- *         &lt;element name="author" type="{http://www.w3.org/2001/XMLSchema}string"/>
+ *         &lt;element name="legalName" type="{http://www.w3.org/2001/XMLSchema}string"/>
+ *         &lt;element name="country" type="{http://www.w3.org/2001/XMLSchema}string"/>
+ *         &lt;element name="category" type="{http://www.w3.org/2001/XMLSchema}string"/>
  *         &lt;element name="description" type="{http://www.w3.org/2001/XMLSchema}string"/>
- *         &lt;element name="url" type="{http://www.w3.org/2001/XMLSchema}string"/>
  *       &lt;/sequence>
  *     &lt;/restriction>
  *   &lt;/complexContent>
@@ -38,96 +37,93 @@ import javax.xml.bind.annotation.XmlType;
  * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "shareNews", propOrder = {
-    "source",
-    "title",
-    "author",
-    "description",
-    "url"
+@XmlType(name = "companyInfo", propOrder = {
+    "legalName",
+    "country",
+    "category",
+    "description"
 })
-public class ShareNews {
+public class CompanyInfo {
 
     @XmlElement(required = true)
-    protected String source;
+    protected String legalName;
     @XmlElement(required = true)
-    protected String title;
+    protected String country;
     @XmlElement(required = true)
-    protected String author;
+    protected String category;
     @XmlElement(required = true)
     protected String description;
-    @XmlElement(required = true)
-    protected String url;
 
     /**
-     * Gets the value of the source property.
+     * Gets the value of the legalName property.
      * 
      * @return
      *     possible object is
      *     {@link String }
      *     
      */
-    public String getSource() {
-        return source;
+    public String getLegalName() {
+        return legalName;
     }
 
     /**
-     * Sets the value of the source property.
+     * Sets the value of the legalName property.
      * 
      * @param value
      *     allowed object is
      *     {@link String }
      *     
      */
-    public void setSource(String value) {
-        this.source = value;
+    public void setLegalName(String value) {
+        this.legalName = value;
     }
 
     /**
-     * Gets the value of the title property.
+     * Gets the value of the country property.
      * 
      * @return
      *     possible object is
      *     {@link String }
      *     
      */
-    public String getTitle() {
-        return title;
+    public String getCountry() {
+        return country;
     }
 
     /**
-     * Sets the value of the title property.
+     * Sets the value of the country property.
      * 
      * @param value
      *     allowed object is
      *     {@link String }
      *     
      */
-    public void setTitle(String value) {
-        this.title = value;
+    public void setCountry(String value) {
+        this.country = value;
     }
 
     /**
-     * Gets the value of the author property.
+     * Gets the value of the category property.
      * 
      * @return
      *     possible object is
      *     {@link String }
      *     
      */
-    public String getAuthor() {
-        return author;
+    public String getCategory() {
+        return category;
     }
 
     /**
-     * Sets the value of the author property.
+     * Sets the value of the category property.
      * 
      * @param value
      *     allowed object is
      *     {@link String }
      *     
      */
-    public void setAuthor(String value) {
-        this.author = value;
+    public void setCategory(String value) {
+        this.category = value;
     }
 
     /**
@@ -152,30 +148,6 @@ public class ShareNews {
      */
     public void setDescription(String value) {
         this.description = value;
-    }
-
-    /**
-     * Gets the value of the url property.
-     * 
-     * @return
-     *     possible object is
-     *     {@link String }
-     *     
-     */
-    public String getUrl() {
-        return url;
-    }
-
-    /**
-     * Sets the value of the url property.
-     * 
-     * @param value
-     *     allowed object is
-     *     {@link String }
-     *     
-     */
-    public void setUrl(String value) {
-        this.url = value;
     }
 
 }
