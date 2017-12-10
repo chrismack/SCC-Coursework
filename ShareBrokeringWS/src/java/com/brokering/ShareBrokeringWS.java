@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -51,6 +52,10 @@ public class ShareBrokeringWS {
     private static final String QUANDL = "www.quandl.com";
     private static final String QUANDLPATH = "/api/v3/datasets/";
     
+    private static final String NEWS = "newsapi.org";
+    private static final String NEWSPATH = "/v2/everything/";
+    private static final String NEWSKEY = "5ab4f01d60db4e53a512bbc9be6b2610";
+    
     public ShareBrokeringWS() {
         errorShare.setCompanyName("No shares could be found");
     }
@@ -62,7 +67,7 @@ public class ShareBrokeringWS {
     @WebMethod(operationName = "setup")
     public Shares setup() {
         Shares shares = new Shares();
-        List<Share> sharesList = shares.getShare();
+        List<Share> sharesList = shares.getShares();
         
         Share share = new Share();
         share.setCompanyName("Apple");
@@ -121,7 +126,7 @@ public class ShareBrokeringWS {
         List<Share> sharesList = getAllShares();
         
         Shares foundShares = new Shares();
-        List<Share> searchList = foundShares.getShare();
+        List<Share> searchList = foundShares.getShares();
         
         for (Share share : sharesList) {
             if(share.getCompanyName().contains(companyName)) {
@@ -165,7 +170,7 @@ public class ShareBrokeringWS {
     @WebMethod(operationName = "getAllShares")
     public List<Share> getAllShares() {
         Shares shares = unmarshalShares();
-        List<Share> sharesList = shares.getShare();
+        List<Share> sharesList = shares.getShares();
         for(Share share : sharesList) {
             updateShare(share);
         }
@@ -226,7 +231,7 @@ public class ShareBrokeringWS {
                         share.setAvailableShares(currentShares - volume);
                         
                         Shares shares = new Shares();
-                        shares.share = sharesList;
+                        shares.shares = sharesList;
                         marshalShares(shares);
                         return volume + " shares bought from " + symbol;
                     }
@@ -380,6 +385,63 @@ public class ShareBrokeringWS {
         } catch (JAXBException e) {
             System.out.println(e);
         }
+        return null;
+    }
+
+    /**
+     * Web service operation
+     * @param symbol
+     * @return 
+     */
+    @WebMethod(operationName = "getShareNews")
+    public List<ShareNews> getShareNews(@WebParam(name = "symbol") String symbol) {
+        //TODO write your implementation code here:
+        if(symbol != null) {
+            String newsURL = "https://" + NEWS + NEWSPATH;
+            Map<String, String> queries = new HashMap<>();
+            queries.put("q", symbol);
+            queries.put("sortBy", "publishedAt");
+            queries.put("apiKey", NEWSKEY);
+            queries.put("language", "en");
+            newsURL += queryBuilder(queries);
+            
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Content-Type", "application/json; charset-utf8");
+            headers.put("Accept-Charset", "utf-8");
+            
+            List<ShareNews> newsList = new ArrayList<>();
+            
+            try {
+                InputStream is = sendGet(new URL(newsURL), headers);
+                if(is != null) {
+                    JsonReader json = Json.createReader(is);
+                    JsonObject jo = json.readObject();
+                    JsonArray jArr = jo.getJsonArray("articles");
+                    for(int i = 0; i < jArr.size(); i++) {
+                        ShareNews news = new ShareNews();
+                        
+                        JsonObject currentItem = jArr.getJsonObject(i);
+                        
+                        String source = currentItem.getJsonObject("source").getString("name");
+                        String title = currentItem.getString("title");
+                        String author = currentItem.getString("author", "");
+                        String description = currentItem.getString("description");
+                        String url = currentItem.getString("url");
+                        
+                        news.setSource(source);
+                        news.setTitle(title);
+                        news.setAuthor(author);
+                        news.setDescription(description);
+                        news.setUrl(url);
+                        newsList.add(news);
+                    }
+                    return newsList;
+                } 
+            } catch (MalformedURLException ex) {
+                Logger.getLogger(ShareBrokeringWS.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
         return null;
     }
 

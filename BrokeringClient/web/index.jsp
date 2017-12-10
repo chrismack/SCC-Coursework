@@ -27,7 +27,9 @@
         </div>
             
             <div id="content">
-                
+                <div class="column">Hello</div>
+                <div class="column">Hello</div>
+                <div class="column">Hello</div>
             </div>
     </body>
     
