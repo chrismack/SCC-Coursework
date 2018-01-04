@@ -5,11 +5,9 @@
  */
 package com.brokering;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -103,6 +101,32 @@ public class ShareBrokeringWS {
         share.setPrice(price);
         sharesList.add(share);
 
+        share = new Share();
+        share.setCompanyName("Google");
+        share.setCompanySymobol("GOOG");
+        share.setDomain("google.com");
+        share.setAvailableShares(1000);
+
+        price = new SharePrice();
+        price.setCurrency("USD");
+        price.setValue(0);
+        price.setLastUpdate(generateDate(2017, 12, 15));
+        share.setPrice(price);
+        sharesList.add(share);
+
+        share = new Share();
+        share.setCompanyName("Intel");
+        share.setCompanySymobol("INTX");
+        share.setDomain("intel.com");
+        share.setAvailableShares(1000);
+
+        price = new SharePrice();
+        price.setCurrency("USD");
+        price.setValue(0);
+        price.setLastUpdate(generateDate(2017, 12, 15));
+        share.setPrice(price);
+        sharesList.add(share);
+
         marshalShares(shares);
 
         return shares;
@@ -110,6 +134,10 @@ public class ShareBrokeringWS {
 
     private boolean isStringEmpty(String str) {
         return str == null || str.equalsIgnoreCase("");
+    }
+
+    private boolean containsIgnoreCase(String str1, String str2) {
+        return str1.toLowerCase().contains(str2.toLowerCase());
     }
 
     /**
@@ -139,14 +167,14 @@ public class ShareBrokeringWS {
         List<Share> searchList = foundShares.getShares();
 
         for (Share share : sharesList) {
-            if (share.getCompanyName().contains(companyName)) {
+            if (containsIgnoreCase(share.getCompanyName(), companyName)) {
                 boolean matches = false;
 
                 if (!isStringEmpty(companyName)) {
-                    matches = share.getCompanyName().contains(companyName);
+                    matches = containsIgnoreCase(share.getCompanyName(), companyName);
                 }
                 if (!isStringEmpty(companySymbol) && matches) {
-                    matches = share.getCompanySymobol().contains(companySymbol);
+                    matches = containsIgnoreCase(share.getCompanySymobol(), companySymbol);
                 }
 
                 // Check min and max shares avaliable
@@ -184,6 +212,7 @@ public class ShareBrokeringWS {
         List<Share> sharesList = shares.getShares();
         for (Share share : sharesList) {
             updateShare(share);
+            share.companyInfo = getCompanyInfo(share);
         }
         marshalShares(shares);
         return sharesList;
@@ -307,6 +336,7 @@ public class ShareBrokeringWS {
 
             Map<String, String> queries = new HashMap<>();
             queries.put("rows", "8");
+            queries.put("api_key", "gL4t7zbiG_3nhAHxURx2");
 //            queries.put("column_index", "4");
             urlString += queryBuilder(queries);
 
@@ -465,24 +495,24 @@ public class ShareBrokeringWS {
      * @return
      */
     @WebMethod(operationName = "getCompanyInfo")
-    public CompanyInfo getCompanyInfo(@WebParam(name = "companySymbol") String symbol) {
+    public CompanyInfo getCompanyInfo(@WebParam(name = "companySymbol") Share share) {
         CompanyInfo info = new CompanyInfo();
-        if (symbol != null) {
-            List<Share> sharesList = getAllShares();
-            Share share = null;
+        if (share.getCompanySymobol() != null) {
+            List<Share> sharesList = unmarshalShares().getShares();
+            Share l_share = null;
             int index = 0;
             for (index = 0; index < sharesList.size(); index++) {
-                share = sharesList.get(index);
-                if (share.getCompanySymobol().equalsIgnoreCase(symbol)) {
-                    share = sharesList.get(index);
+                l_share = sharesList.get(index);
+                if (l_share.getCompanySymobol().equalsIgnoreCase(share.getCompanySymobol())) {
+                    l_share = sharesList.get(index);
                     break;
                 }
             }
 
-            if (share != null) {
-                if (share.getCompanyInfo() == null) {
+            if (l_share != null) {
+                if (l_share.getCompanyInfo() == null) {
 
-                    String domain = share.getDomain();
+                    String domain = l_share.getDomain();
                     try {
                         String cbURL = "https://" + CLEARBIT + CLEARBITPATH;
                         Map<String, String> queries = new HashMap<>();
@@ -505,11 +535,11 @@ public class ShareBrokeringWS {
 
                             // save company info so we dont need to go to the rest
                             // api for every request
-                            share.setCompanyInfo(info);
-                            sharesList.set(index, share);
-                            Shares shares = new Shares();
-                            shares.shares = sharesList;
-                            marshalShares(shares);
+//                            l_share.setCompanyInfo(info);
+//                            sharesList.set(index, share);
+//                            Shares shares = new Shares();
+//                            shares.shares = sharesList;
+//                            marshalShares(shares);
                             return info;
                         }
                     } catch (UnsupportedEncodingException | MalformedURLException ex) {
