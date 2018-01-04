@@ -44,12 +44,17 @@ a:link, a:visited {color: inherit}
 #menu #search {
     display: inline-block;
     padding: 5px 0 0 10px;
-    width: 300px;
     height: 30px;
 
 }
 
 #menu #search input {
+    display: inline-block;
+    width: 250px;
+    height: 30px;
+}
+
+#menu #search select {
     display: inline-block;
     width: 250px;
     height: 30px;

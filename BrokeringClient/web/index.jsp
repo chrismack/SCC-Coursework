@@ -4,6 +4,7 @@
     Author     : Chris
 --%>
 
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@page import="javax.xml.datatype.XMLGregorianCalendar"%>
 <%@page import="com.brokering.ShareHistory"%>
 <%@page import="java.lang.String"%>
@@ -38,6 +39,21 @@
     </head>
 
     <body>
+
+        <%
+            java.util.List<java.lang.String> currencies = new java.util.ArrayList<java.lang.String>();
+            try {
+                com.brokering.ShareBrokeringWS_Service service = new com.brokering.ShareBrokeringWS_Service();
+                com.brokering.ShareBrokeringWS port = service.getShareBrokeringWSPort();
+                // TODO process result here
+                currencies = port.getCurrencies();
+            } catch (Exception ex) {
+                // TODO handle custom exceptions here
+            }
+        %>
+
+
+
         <div id="menu">
             <div id="title">
                 Shares Brokering
@@ -47,11 +63,22 @@
             <form name="search" method="get" id="search">
                 <input name="searchBox" required></input>
 
+                <select id="currencies" name="currency">
+                    <% for (String item : currencies) {
+                        String curSplit[] = item.split(" - ");
+                        System.out.println(curSplit[0]);
+                    %>
+                    
+                    <option value="<%= curSplit[0] %>"><%out.print(item);%></option>
+                    <%}%>
+                </select>
+
                 <button onclick="console.log('click')" type="submit">
                     <img class="search-icon" src="res/search.png"></img>
                 </button>
             </form>
         </div>
+
 
 
 
@@ -64,6 +91,9 @@
             String buyResp = null;
 
             String[] search = request.getParameterValues("searchBox");
+            String[] currencyArr = request.getParameterValues("currency");
+            String currCode = currencyArr != null ? currencyArr[0] : null;
+            
             com.brokering.SearchSharesResponse.Return result = null;
 
             try {
@@ -71,7 +101,7 @@
                 com.brokering.ShareBrokeringWS port = service.getShareBrokeringWSPort();
 
                 if (buySym != null && buyVol != null) {
-                    java.lang.String buyResult = port.buyShares(buySym[0], Integer.parseInt(buyVol[0]));
+                    java.lang.String buyResult = port.buyShares(buySym[0], Integer.parseInt(buyVol[0]), currCode);
                     reselect = buySym[0];
                     System.out.println(buyResult);
                     buyResp = buyResult;
@@ -86,8 +116,9 @@
                     java.lang.String currentPrice = "";
                     java.lang.String minPrice = "";
                     java.lang.String maxPrice = "";
+                    
                     // TODO process result here
-                    result = port.searchShares(companyName, companySymbol, minShares, maxShares, currentPrice, minPrice, maxPrice);
+                    result = port.searchShares(companyName, companySymbol, minShares, maxShares, currentPrice, minPrice, maxPrice, currCode);
 
                     Map<String, List<ShareNews>> companyNews = new HashMap<String, List<ShareNews>>();
                     for (int i = 0; i < result.getShares().size(); i++) {
@@ -239,10 +270,10 @@
                     <span tab="companyInfo">
                         <h1 class="title"><u><a href="<%= "http://" + result.getShares().get(i).getDomain()%>">Company Info</a></u></h1>
                         <h2><%= result.getShares().get(i).getCompanyName()%></h2>
-                        <% if(result.getShares().get(i).getCompanyInfo() != null) { %>
-                            <h4><%= result.getShares().get(i).getCompanyInfo().getLegalName()%></h4>
-                            <span><%= result.getShares().get(i).getCompanyInfo().getCountry()%></span>
-                            <p> <%= result.getShares().get(i).getCompanyInfo().getDescription()%></p>
+                        <% if (result.getShares().get(i).getCompanyInfo() != null) {%>
+                        <h4><%= result.getShares().get(i).getCompanyInfo().getLegalName()%></h4>
+                        <span><%= result.getShares().get(i).getCompanyInfo().getCountry()%></span>
+                        <p> <%= result.getShares().get(i).getCompanyInfo().getDescription()%></p>
                         <% } %>
                     </span>
                     <span tab="companyNews" style="display: none;">
@@ -281,7 +312,7 @@
                 toastr.info('<%= buyResp%>');
             </script>
             <%
-                buyResp = null;
+                    buyResp = null;
                 }
 
             %>

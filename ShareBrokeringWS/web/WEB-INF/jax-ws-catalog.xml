@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog" prefer="system">
+    <system systemId="file:/D:/Users/Chris/Documents/Chris/Uni/Year%20Three/SCC/ShareBrokeringWS/src/java/SharesBrokeringSchema.xsd" uri="src/conf/xml-resources/jaxb/SharesBinding/SharesBrokeringSchema.xsd"/>
+    <system systemId="http://localhost:8080/CurrencyConvertor/CurrencyConversionWS?WSDL" uri="wsdl/localhost_8080/CurrencyConvertor/CurrencyConversionWS.wsdl"/>
+    <system systemId="http://localhost:8080/CurrencyConvertor/CurrencyConversionWS?xsd=1" uri="wsdl/localhost_8080/CurrencyConvertor/CurrencyConversionWS.xsd_1.xsd"/>
+</catalog>

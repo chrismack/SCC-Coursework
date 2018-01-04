@@ -5,6 +5,7 @@
  */
 package com.brokering;
 
+import docwebservices.CurrencyConversionWS_Service;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,6 +38,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
+import javax.xml.ws.WebServiceRef;
 
 /**
  *
@@ -45,6 +47,9 @@ import javax.xml.datatype.XMLGregorianCalendar;
 @WebService(serviceName = "ShareBrokeringWS")
 @Stateless()
 public class ShareBrokeringWS {
+
+    @WebServiceRef(wsdlLocation = "WEB-INF/wsdl/localhost_8080/CurrencyConvertor/CurrencyConversionWS.wsdl")
+    private CurrencyConversionWS_Service service;
 
     // Location from which we marshal and unmarshal XML
     private final File sharesXML = new File("Shares.xml");
@@ -150,6 +155,7 @@ public class ShareBrokeringWS {
      * @param currentPrice
      * @param minPrice
      * @param maxPrice
+     * @param currency
      * @return
      */
     @WebMethod(operationName = "searchShares")
@@ -159,9 +165,10 @@ public class ShareBrokeringWS {
             @WebParam(name = "maxShares") String maxShares,
             @WebParam(name = "currentPrice") String currentPrice,
             @WebParam(name = "minPrice") String minPrice,
-            @WebParam(name = "maxPrice") String maxPrice) {
+            @WebParam(name = "maxPrice") String maxPrice,
+            @WebParam(name = "currency") String currency) {
 
-        List<Share> sharesList = getAllShares();
+        List<Share> sharesList = getAllShares(currency);
 
         Shares foundShares = new Shares();
         List<Share> searchList = foundShares.getShares();
@@ -207,7 +214,7 @@ public class ShareBrokeringWS {
      * @return
      */
     @WebMethod(operationName = "getAllShares")
-    public List<Share> getAllShares() {
+    public List<Share> getAllShares(@WebParam(name = "currency") String currency) {
         Shares shares = unmarshalShares();
         List<Share> sharesList = shares.getShares();
         for (Share share : sharesList) {
@@ -215,6 +222,17 @@ public class ShareBrokeringWS {
             share.companyInfo = getCompanyInfo(share);
         }
         marshalShares(shares);
+        
+        
+        if(currency != null) {
+            docwebservices.CurrencyConversionWS port = service.getCurrencyConversionWSPort();
+            for(Share share : sharesList) {
+                double conversionRate = port.getConversionRate(share.getPrice().getCurrency(), currency);
+                share.getPrice().setValue((float) (share.getPrice().getValue() * conversionRate));
+                share.getPrice().setCurrency(currency);
+            }
+        }
+        
         return sharesList;
     }
 
@@ -225,8 +243,8 @@ public class ShareBrokeringWS {
      * @return
      */
     @WebMethod(operationName = "getShareName")
-    public Share getShareByName(@WebParam(name = "companyName") String name) {
-        List<Share> sharesList = getAllShares();
+    public Share getShareByName(@WebParam(name = "companyName") String name, @WebParam(name = "currency") String currency) {
+        List<Share> sharesList = getAllShares(currency);
 
         for (Share share : sharesList) {
             if (name.equalsIgnoreCase(share.getCompanyName())) {
@@ -244,8 +262,8 @@ public class ShareBrokeringWS {
      * @return
      */
     @WebMethod(operationName = "getShareBySymobol")
-    public Share getShareBySymobol(@WebParam(name = "comanySymbol") String sym) {
-        List<Share> sharesList = getAllShares();
+    public Share getShareBySymobol(@WebParam(name = "comanySymbol") String sym, @WebParam(name = "currency") String currency) {
+        List<Share> sharesList = getAllShares(currency);
 
         for (Share share : sharesList) {
             if (sym.equalsIgnoreCase(share.getCompanySymobol())) {
@@ -264,9 +282,10 @@ public class ShareBrokeringWS {
      */
     @WebMethod(operationName = "buyShares")
     public String buyShares(@WebParam(name = "symbol") String symbol,
-            @WebParam(name = "volume") int volume) {
+            @WebParam(name = "volume") int volume,
+            @WebParam(name = "currency") String currency) {
         if (volume > 0) {
-            List<Share> sharesList = getAllShares();
+            List<Share> sharesList = getAllShares(currency);
             for (Share share : sharesList) {
                 if (share.getCompanySymobol().equalsIgnoreCase(symbol)) {
                     int currentShares = share.getAvailableShares();
@@ -553,6 +572,15 @@ public class ShareBrokeringWS {
 
         // should return empty object
         return info;
+    }
+
+    /**
+     * Web service operation
+     */
+    @WebMethod(operationName = "getCurrencies")
+    public List<String> getCurrencies() {
+        docwebservices.CurrencyConversionWS port = service.getCurrencyConversionWSPort();
+        return port.getCurrencyCodes();
     }
 
 }
