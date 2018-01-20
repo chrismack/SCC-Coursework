@@ -53,32 +53,46 @@
         %>
 
 
+        <form name="search" method="get" >
+            <div id="menu">
+                <div id="title">
+                    Shares Brokering
+                </div>
 
-        <div id="menu">
-            <div id="title">
-                Shares Brokering
+                <span id="search">    
+
+                    <input name="searchBox"></input>
+
+                    <select id="currencies" name="currency">
+                        <option value="">Default</option>
+                        <% for (String item : currencies) {
+                                String curSplit[] = item.split(" - ");
+                                System.out.println(curSplit[0]);
+                        %>
+
+                        <option value="<%= curSplit[0]%>"><%out.print(item);%></option>
+                        <%}%>
+                        
+                    </select>
+
+                    <button onclick="console.log('click')" type="submit">
+                        <img class="search-icon" src="res/search.png"></img>
+                    </button>
+                </span>
+
             </div>
 
+            <span id="advancedSearch" onclick="toggleAdvanced()" style="color: blueviolet">Show Advanced</span>
+            <div id="advSeachInputs" style="display: none">
+                <span>Company Symbol</span><input name="sym"></input>
+                <span>Minimum Share</span> <input name="minShare"></input> <br />
+                <span>Maximum Share</span> <input name="maxShare"></input>
+                <span>Minimum Price</span> <input name="minPrice"></input> <br />
+                <span>Maximum Price</span> <input name="maxPrice"></input>
+                <span>Current Price</span> <input name="currentPrice"></input>
+            </div>
 
-            <form name="search" method="get" id="search">
-                <input name="searchBox" required></input>
-
-                <select id="currencies" name="currency">
-                    <% for (String item : currencies) {
-                        String curSplit[] = item.split(" - ");
-                        System.out.println(curSplit[0]);
-                    %>
-                    
-                    <option value="<%= curSplit[0] %>"><%out.print(item);%></option>
-                    <%}%>
-                </select>
-
-                <button onclick="console.log('click')" type="submit">
-                    <img class="search-icon" src="res/search.png"></img>
-                </button>
-            </form>
-        </div>
-
+        </form>
 
 
 
@@ -91,9 +105,16 @@
             String buyResp = null;
 
             String[] search = request.getParameterValues("searchBox");
+            String symbol = request.getParameter("sym");
+            String minShare = request.getParameter("minShare");
+            String maxShare = request.getParameter("maxShare");
+            String minPrice = request.getParameter("minPrice");
+            String maxPrice = request.getParameter("maxPrice");
+            String currentPrice = request.getParameter("currentPrice");
+
             String[] currencyArr = request.getParameterValues("currency");
             String currCode = currencyArr != null ? currencyArr[0] : null;
-            
+
             com.brokering.SearchSharesResponse.Return result = null;
 
             try {
@@ -107,29 +128,31 @@
                     buyResp = buyResult;
                 }
 
-                if (search != null && search[0] != "") {
-                    // TODO initialize WS operation arguments here
-                    java.lang.String companyName = search[0];
-                    java.lang.String companySymbol = "";
-                    java.lang.String minShares = "";
-                    java.lang.String maxShares = "";
-                    java.lang.String currentPrice = "";
-                    java.lang.String minPrice = "";
-                    java.lang.String maxPrice = "";
-                    
-                    // TODO process result here
-                    result = port.searchShares(companyName, companySymbol, minShares, maxShares, currentPrice, minPrice, maxPrice, currCode);
+//                if (search != null && search[0] != "") {
+                // TODO initialize WS operation arguments here
+                java.lang.String companyName = search[0];
+//                    java.lang.String symbol = "";
+//                    java.lang.String minShare = "";
+//                    java.lang.String maxShare = "";
+//                    java.lang.String currentPrice = "";
+//                    java.lang.String minPrice = "";
+//                    java.lang.String maxPrice = "";
 
-                    Map<String, List<ShareNews>> companyNews = new HashMap<String, List<ShareNews>>();
-                    for (int i = 0; i < result.getShares().size(); i++) {
-                        String sym = result.getShares().get(i).getCompanySymobol();
+                // TODO process result here
+                result = port.searchShares(companyName, symbol, minShare, maxShare, currentPrice, minPrice, maxPrice, currCode);
 
-                        List<ShareNews> news = port.getShareNews(sym);
+                Map<String, List<ShareNews>> companyNews = new HashMap<String, List<ShareNews>>();
+                for (int i = 0; i < result.getShares().size(); i++) {
+                    String sym = result.getShares().get(i).getCompanySymobol();
+
+                    List<ShareNews> news = port.getShareNews(sym);
+                    if (news.size() > 2) {
                         companyNews.put(sym, news);
                         System.out.println(news.get(0).getTitle());
                         System.out.println(news.get(1).getTitle());
                         System.out.println(news.get(2).getTitle());
                     }
+                }
 
 
         %>
@@ -171,6 +194,7 @@
                 <canvas id="<%= "Chart_" + i%>" width="400" height="400"></canvas>
                     <%
                         List<ShareHistory> shareHist = result.getShares().get(i).getPrice().getHistory();
+                        if (shareHist.size() > 0) {
                     %>
                 <script>
                     var ctx = document.getElementById("Chart_" + <%= i%>).getContext('2d');
@@ -250,6 +274,9 @@
                         }
                     });
                 </script> 
+                <%
+                    }
+                %>
                 <p>Value: <%= result.getShares().get(i).getPrice().getValue()%> - <%= result.getShares().get(i).getPrice().getCurrency()%></p>
                 <form name="buy" method="post" id="<%= "buy_" + i%>">
                     <input name="buySymbol" type="hidden" value="<%= result.getShares().get(i).getCompanySymobol()%>"></input>
@@ -318,7 +345,7 @@
             %>
 
         </div>
-        <%                }
+        <%//            }
             } catch (Exception ex) {
                 // TODO handle custom exceptions here
                 System.out.println(ex);

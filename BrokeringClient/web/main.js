@@ -5,6 +5,19 @@
  */
 
 
+var advanced = false;
+
+function toggleAdvanced() {
+    advanced = !advanced;
+    var advancedSpan = $('#advancedSearch');
+    var advancedText = advanced ? "Hide Advanced" : "Show Advanced";
+    advancedSpan.text(advancedText);
+    
+    var inputs = $('#advSeachInputs');
+    var disp = advanced ? 'block' : 'none'
+    inputs.css('display', disp);
+}
+
 function switchTab(header) {
     var parent = $(header).parent();
     var children = parent.children('[tab]');

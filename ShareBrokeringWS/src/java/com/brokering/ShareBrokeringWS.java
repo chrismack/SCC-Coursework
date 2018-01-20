@@ -15,6 +15,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -65,6 +68,9 @@ public class ShareBrokeringWS {
     private static final String CLEARBIT = "company.clearbit.com";
     private static final String CLEARBITPATH = "/v2/companies/find";
     private static final String CLEARBITKEY = System.getenv("CLEARBIT_KEY");
+    
+    // Last time the conversions were updated. Updated are done around 4pm CET
+    private LocalDateTime lastUpdated = null;
 
     public ShareBrokeringWS() {
         errorShare.setCompanyName("No shares could be found");
@@ -173,37 +179,43 @@ public class ShareBrokeringWS {
         Shares foundShares = new Shares();
         List<Share> searchList = foundShares.getShares();
 
+        if(isStringEmpty(companyName + companySymbol + minShares + maxShares + minPrice + maxPrice)) {
+            System.out.println(foundShares);
+           foundShares.shares = sharesList;
+           return foundShares;
+        }
+        
         for (Share share : sharesList) {
-            if (containsIgnoreCase(share.getCompanyName(), companyName)) {
-                boolean matches = false;
+            
+            boolean matches = false;
 
-                if (!isStringEmpty(companyName)) {
-                    matches = containsIgnoreCase(share.getCompanyName(), companyName);
-                }
-                if (!isStringEmpty(companySymbol) && matches) {
-                    matches = containsIgnoreCase(share.getCompanySymobol(), companySymbol);
-                }
+            if (!isStringEmpty(companyName)) {
+                matches = containsIgnoreCase(share.getCompanyName(), companyName);
+            }
+            if (!isStringEmpty(companySymbol) && !matches) {
+                matches = containsIgnoreCase(share.getCompanySymobol(), companySymbol);
+            }
 
-                // Check min and max shares avaliable
-                if (!isStringEmpty(minShares) && matches) {
-                    matches = share.getAvailableShares() >= Integer.parseInt(minShares);
-                }
-                if (!isStringEmpty(maxShares) && matches) {
-                    matches = share.getAvailableShares() <= Integer.parseInt(maxShares);
-                }
+            // Check min and max shares avaliable
+            if (!isStringEmpty(minShares) && !matches) {
+                matches = share.getAvailableShares() >= Integer.parseInt(minShares);
+            }
+            if (!isStringEmpty(maxShares) && !matches) {
+                matches = share.getAvailableShares() <= Integer.parseInt(maxShares);
+            }
 
-                if (!isStringEmpty(minPrice) && matches) {
-                    matches = share.getPrice().getValue() >= Float.parseFloat(minPrice);
-                }
-                if (!isStringEmpty(maxPrice) && matches) {
-                    matches = share.getPrice().getValue() >= Float.parseFloat(maxPrice);
-                }
+            if (!isStringEmpty(minPrice) && !matches) {
+                matches = share.getPrice().getValue() >= Float.parseFloat(minPrice);
+            }
+            if (!isStringEmpty(maxPrice) && !matches) {
+                matches = share.getPrice().getValue() >= Float.parseFloat(maxPrice);
+            }
 
-                if (matches) {
-                    searchList.add(share);
-                }
+            if (matches) {
+                searchList.add(share);
             }
         }
+        
 
         return foundShares;
     }
@@ -217,17 +229,30 @@ public class ShareBrokeringWS {
     public List<Share> getAllShares(@WebParam(name = "currency") String currency) {
         Shares shares = unmarshalShares();
         List<Share> sharesList = shares.getShares();
-        for (Share share : sharesList) {
-            updateShare(share);
-            share.companyInfo = getCompanyInfo(share);
+        
+        if(shouldUpdate()) {
+            for (Share share : sharesList) {
+                updateShare(share);
+                share.companyInfo = getCompanyInfo(share);
+            }
+            marshalShares(shares);
         }
-        marshalShares(shares);
         
-        
-        if(currency != null) {
+        if(currency != null && !currency.equalsIgnoreCase("")) {
             docwebservices.CurrencyConversionWS port = service.getCurrencyConversionWSPort();
             for(Share share : sharesList) {
                 double conversionRate = port.getConversionRate(share.getPrice().getCurrency(), currency);
+                
+                List<ShareHistory> histList = new ArrayList<>();
+                for(ShareHistory hist : share.getPrice().getHistory()) {
+                    hist.setOpen((float) (hist.getOpen() * conversionRate));
+                    hist.setClose((float) (hist.getClose() * conversionRate));
+                    hist.setHigh((float) (hist.getHigh() * conversionRate));
+                    hist.setLow((float) (hist.getLow() * conversionRate));
+                    histList.add(hist);
+                }
+                share.getPrice().history = histList;
+                
                 share.getPrice().setValue((float) (share.getPrice().getValue() * conversionRate));
                 share.getPrice().setCurrency(currency);
             }
@@ -399,6 +424,7 @@ public class ShareBrokeringWS {
                 share.getPrice().history = historyList;
 
             }
+        lastUpdated = LocalDateTime.now(ZoneId.of("CET"));
         } catch (IOException | ParseException ex) {
             Logger.getLogger(ShareBrokeringWS.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -529,8 +555,8 @@ public class ShareBrokeringWS {
             }
 
             if (l_share != null) {
-                if (l_share.getCompanyInfo() == null) {
-
+                if (l_share.getCompanyInfo() == null || l_share.getCompanyInfo().getDescription() == null) {
+                    
                     String domain = l_share.getDomain();
                     try {
                         String cbURL = "https://" + CLEARBIT + CLEARBITPATH;
@@ -581,6 +607,19 @@ public class ShareBrokeringWS {
     public List<String> getCurrencies() {
         docwebservices.CurrencyConversionWS port = service.getCurrencyConversionWSPort();
         return port.getCurrencyCodes();
+    }
+    
+    private boolean shouldUpdate() {
+        if (lastUpdated == null) {
+            return true;
+        }
+
+        // Check for update if last update is older than 24 hours or 
+        // if this is first update after 5pm cet time today
+        LocalDateTime cetTime = LocalDateTime.now(ZoneId.of("CET"));
+        long hoursDiff = lastUpdated.until(cetTime, ChronoUnit.HOURS);
+
+        return hoursDiff >= 24 || lastUpdated.getHour() < 17;
     }
 
 }
