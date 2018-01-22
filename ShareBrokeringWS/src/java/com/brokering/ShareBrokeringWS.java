@@ -210,6 +210,10 @@ public class ShareBrokeringWS {
             if (!isStringEmpty(maxPrice) && !matches) {
                 matches = share.getPrice().getValue() >= Float.parseFloat(maxPrice);
             }
+            
+            if(!isStringEmpty(currentPrice) && !matches) {
+                matches = share.getPrice().getValue() == Float.parseFloat(currentPrice);
+            }
 
             if (matches) {
                 searchList.add(share);
