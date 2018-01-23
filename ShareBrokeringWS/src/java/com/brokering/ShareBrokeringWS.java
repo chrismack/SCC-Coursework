@@ -6,9 +6,11 @@
 package com.brokering;
 
 import docwebservices.CurrencyConversionWS_Service;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -17,6 +19,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -28,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.util.converter.LocalDateTimeStringConverter;
 import javax.jws.WebService;
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
@@ -323,6 +327,14 @@ public class ShareBrokeringWS {
 
                         Shares shares = new Shares();
                         shares.shares = sharesList;
+                        
+                        try {
+                            sendStats(share.getCompanySymobol(), volume, share.getPrice().getValue());
+                        } catch (Exception ex) {
+                            Logger.getLogger(ShareBrokeringWS.class.getName()).log(Level.SEVERE, null, ex);
+                            System.out.println("Could not send stats to rest");
+                        }
+                        
                         marshalShares(shares);
                         return volume + " shares bought from " + symbol;
                     }
@@ -624,6 +636,35 @@ public class ShareBrokeringWS {
         long hoursDiff = lastUpdated.until(cetTime, ChronoUnit.HOURS);
 
         return hoursDiff >= 24 || lastUpdated.getHour() < 17;
+    }
+    
+    private void sendStats(String sym, int volume, float price) throws Exception{
+        URL url = new URL("http://localhost:8080/Admin/stats/" + sym);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        try {
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Content-type", "text/xml");
+    //        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-ddTHH:mm:ss");
+
+            String dateTime = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(Calendar.getInstance().getTime());
+            String xml = "<Buy>\n" +
+            "	<volume>" + volume + "</volume>\n" +
+            "	<price>" + price + "</price>\n" +
+            "	<date>" + dateTime + "</date>\n" +
+            "</Buy>";
+
+            OutputStream output = new BufferedOutputStream(connection.getOutputStream());
+            output.write(xml.getBytes());
+            output.flush();
+            output.close();
+            
+            int responseCode = connection.getResponseCode();
+            System.out.println(responseCode);
+        }
+        finally {
+            connection.disconnect();
+        }
     }
 
 }
